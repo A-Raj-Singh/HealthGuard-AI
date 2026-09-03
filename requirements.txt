@@ -1,0 +1,11 @@
+streamlit>=1.42,<2
+sqlalchemy>=2.0,<3
+python-dotenv>=1.0,<2
+bcrypt>=4.1,<5
+pandas>=2.2,<4
+requests>=2.31,<3
+plotly>=5.24,<7
+reportlab>=4.2,<5
+langchain>=1.0,<2
+langchain-openai>=1.0,<2
+pytest>=8,<10
