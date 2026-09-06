@@ -23,4 +23,4 @@ def render(patient_id):
     if logs:
         df = pd.DataFrame([{'Date':x.log_date,'Food':x.food_name,'Calories':x.calories,'Protein (g)':x.protein_g,'Carbs (g)':x.carbs_g,'Fat (g)':x.fat_g,'Source':x.source} for x in logs])
         st.subheader('Nutrition history')
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width='stretch', hide_index=True)

@@ -30,7 +30,7 @@ with st.sidebar:
     st.caption(f"Signed in as **{user['username']}**")
     page = st.radio('Navigation', ['Dashboard','Medication','Nutrition','Medical Information','AI Assistant','Reports'])
     st.divider()
-    if st.button('Log out', use_container_width=True):
+    if st.button('Log out', width='stretch'):
         st.session_state.clear(); st.rerun()
 
 if page == 'Dashboard':
