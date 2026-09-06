@@ -1,6 +1,12 @@
 import streamlit as st
 from datetime import datetime, time, date
-from database.crud import add_medication, list_medications, delete_medication, mark_dose, dose_status
+from database.crud import (
+    add_medication,
+    list_medications,
+    delete_medication,
+    mark_dose,
+    dose_statuses,
+)
 
 def render(patient_id):
     st.title('💊 Medication Tracker')
@@ -16,8 +22,10 @@ def render(patient_id):
     meds = list_medications(patient_id, active_only=True)
     st.subheader('Today’s schedule')
     now = datetime.now().time()
+    statuses = dose_statuses(patient_id, date.today())
+
     for med in meds:
-        status = dose_status(med.id, date.today())
+        status = statuses.get(med.id, 'pending')
         cols = st.columns([3,2,2,1])
         cols[0].write(f'**{med.medicine_name}** — {med.dosage}')
         cols[1].write(med.reminder_time.strftime('%I:%M %p'))

@@ -59,11 +59,29 @@ def mark_dose(medication_id, patient_id, dose_date=None):
             db.add(dose)
         dose.status = 'taken'; dose.taken_at = datetime.now(); db.commit(); return True
 
-def dose_status(medication_id, dose_date=None):
+def dose_status(medication_id, patient_id, dose_date=None):
     dose_date = dose_date or date.today()
     with get_session() as db:
-        dose = db.scalar(select(DoseLog).where(DoseLog.medication_id == medication_id, DoseLog.dose_date == dose_date))
+        dose = db.scalar(
+            select(DoseLog).where(
+                DoseLog.medication_id == medication_id,
+                DoseLog.patient_id == patient_id,
+                DoseLog.dose_date == dose_date,
+            )
+        )
         return dose.status if dose else 'pending'
+
+
+def dose_statuses(patient_id, dose_date=None):
+    dose_date = dose_date or date.today()
+    with get_session() as db:
+        rows = db.execute(
+            select(DoseLog.medication_id, DoseLog.status).where(
+                DoseLog.patient_id == patient_id,
+                DoseLog.dose_date == dose_date,
+            )
+        ).all()
+        return {medication_id: status for medication_id, status in rows}
 
 def add_metric(patient_id, metric_date, steps, calories_burned, sleep_hours, heart_rate):
     with get_session() as db:
