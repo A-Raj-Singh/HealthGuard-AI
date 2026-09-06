@@ -4,7 +4,11 @@ from database import models  # noqa: F401
 from config import APP_NAME
 
 st.set_page_config(page_title=APP_NAME, page_icon='🏥', layout='wide', initial_sidebar_state='expanded')
-Base.metadata.create_all(bind=engine)
+@st.cache_resource
+def init_database():
+    Base.metadata.create_all(bind=engine)
+
+init_database()
 
 st.markdown('''<style>
 .block-container {padding-top: 2rem; max-width: 1250px;}
