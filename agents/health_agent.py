@@ -154,14 +154,17 @@ def _build_patient_tools(patient_id: int):
 # ---------------------------------------------------------------------
 
 @lru_cache(maxsize=32)
-if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY is not configured.")
+def _get_agent(patient_id: int):
+    """Create and cache a patient-scoped LangChain agent."""
 
-model = ChatGoogleGenerativeAI(
-    model=GEMINI_MODEL,
-    google_api_key=GEMINI_API_KEY,
-    temperature=0.2,
-)
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
+
+    model = ChatGoogleGenerativeAI(
+        model=GEMINI_MODEL,
+        google_api_key=GEMINI_API_KEY,
+        temperature=0.2,
+    )
 
     tools = _build_patient_tools(patient_id)
 
@@ -172,7 +175,6 @@ model = ChatGoogleGenerativeAI(
     )
 
     return agent
-
 
 # ---------------------------------------------------------------------
 # Response extraction
@@ -271,11 +273,11 @@ def ask(prompt: str, patient_id: int) -> str:
 
     # Check configuration before creating the agent.
     if not GEMINI_API_KEY:
-    return (
-        "⚠️ **The AI assistant is not configured.**\n\n"
-        "Please configure `GEMINI_API_KEY` in your local "
-        "`.env` file or Streamlit Cloud Secrets."
-    )
+        return (
+            "⚠️ **The AI assistant is not configured.**\n\n"
+            "Please configure `GEMINI_API_KEY` in your local "
+            "`.env` file or Streamlit Cloud Secrets."
+        )
 
     try:
         agent = _get_agent(int(patient_id))
