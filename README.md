@@ -1,6 +1,6 @@
 # HealthGuard AI — Healthcare Monitoring AI Agent
 
-A Streamlit healthcare monitoring project with SQLite/SQLAlchemy, medication tracking, nutrition logging, MedlinePlus lookup, optional Spoonacular nutrition lookup, and an optional LangChain/OpenAI assistant.
+A Streamlit healthcare monitoring project with SQLite/SQLAlchemy, medication tracking, nutrition logging, MedlinePlus lookup, optional Spoonacular nutrition lookup, and an optional LangChain/Gemini assistant.
 
 ## Important scope
 
@@ -14,7 +14,7 @@ This is an educational software project. It is **not** a medical device and does
 - Medication adherence percentage
 - Nutrition logging with optional Spoonacular lookup
 - Medical-topic search using MedlinePlus
-- Optional LangChain/OpenAI health assistant with read-only patient tools
+- Optional LangChain/Gemini health assistant with read-only patient tools
 - PDF and CSV report downloads
 - SQLite database
 - Pytest test and GitHub Actions CI
@@ -24,7 +24,7 @@ This is an educational software project. It is **not** a medical device and does
 
 - Python 3.11 or 3.12
 - Git
-- An OpenAI API key if you want the AI Assistant
+- A Gemini API key if you want the AI Assistant
 - A Spoonacular API key if you want automatic nutrition lookup
 
 ## 2. Create the environment
@@ -50,12 +50,12 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` and add your own keys. Never commit `.env`.
 
 ```env
-OPENAI_API_KEY=your_key
-OPENAI_MODEL=gpt-4.1-mini
+GEMINI_API_KEY=your_key
+GEMINI_MODEL=gemini-2.5-flash
 SPOONACULAR_API_KEY=your_key
 ```
 
-The application still starts without these keys. Without OpenAI, the AI page explains that it is not configured; without Spoonacular, nutrition can be entered manually.
+The application still starts without these keys. Without Gemini, the AI page explains that it is not configured; without Spoonacular, nutrition can be entered manually.
 
 ## 4. Initialize and seed the database
 
@@ -108,8 +108,8 @@ Do not commit `.env`, `data/healthcare.db`, or `.streamlit/secrets.toml`.
 4. In Advanced settings / Secrets, add:
 
 ```toml
-OPENAI_API_KEY = "your_openai_key"
-OPENAI_MODEL = "gpt-4.1-mini"
+GEMINI_API_KEY = "your_key"
+GEMINI_MODEL = "gemini-2.5-flash"
 SPOONACULAR_API_KEY = "your_spoonacular_key"
 ```
 
