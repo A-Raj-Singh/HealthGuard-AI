@@ -9,6 +9,8 @@ from database.crud import (
     dose_statuses,
 )
 
+from services.medication_interactions import check_medication_interactions
+
 
 def render(patient_id):
 
@@ -26,6 +28,9 @@ def render(patient_id):
         "💡 Reminders appear in the app when their scheduled time is reached. "
         "This prototype does not run background processes or send SMS/email alerts."
     )
+    
+    
+    
 
     # =========================================================
     # ADD MEDICATION
@@ -82,6 +87,51 @@ def render(patient_id):
                 )
 
     st.divider()
+    st.subheader("Medication Safety Check")
+
+    st.caption(
+        "Check available FDA drug-label interaction information for your medications. "
+        "This is informational only and does not replace advice from a doctor or pharmacist."
+    )
+    
+    current_medications = list_medications(patient_id, active_only=True)
+    
+    medicine_names = [
+        medication.medicine_name
+        for medication in current_medications
+    ]
+    
+    if medicine_names:
+        if st.button("Check medication interactions", use_container_width=True):
+            with st.spinner("Checking medication safety information..."):
+                safety_results = check_medication_interactions(medicine_names)
+    
+            st.session_state["medication_safety_results"] = safety_results
+    
+    if "medication_safety_results" in st.session_state:
+        st.markdown("### Safety information")
+    
+        for result in st.session_state["medication_safety_results"]:
+            st.markdown(f"**{result['medicine']}**")
+    
+            if result["found"] and result["interactions"]:
+                st.warning(
+                    "FDA drug-label interaction information is available for this medicine."
+                )
+    
+                for interaction in result["interactions"]:
+                    st.write(interaction)
+    
+            elif result["found"]:
+                st.info(
+                    "No specific interaction information was returned in the "
+                    "FDA drug label retrieved for this medicine."
+                )
+    
+            else:
+                st.warning(result["message"])
+    
+            st.caption("Source: openFDA / FDA drug labeling")
 
     # =========================================================
     # TODAY'S MEDICATIONS
