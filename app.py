@@ -137,6 +137,7 @@ pages = [
     "Dashboard",
     "Medication",
     "Nutrition",
+    "Goals",
     "Medical Information",
     "AI Assistant",
     "Reports",
@@ -309,6 +310,12 @@ elif page == "Medical Information":
 elif page == "AI Assistant":
 
     from ui.chatbot import render
+
+    render(patient_id)
+
+elif page == "Goals":
+
+    from ui.goals import render
 
     render(patient_id)
 
