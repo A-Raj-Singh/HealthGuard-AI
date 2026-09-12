@@ -1,214 +1,332 @@
 """
-Local HealthGuard AI Assistant.
+HealthGuard AI - LangChain Healthcare Agent
 
-Works without OpenAI API credits.
-Uses HealthGuard patient data and rule-based responses.
+Uses:
+- LangChain 1.x
+- OpenAI through langchain-openai
+- HealthGuard patient-scoped healthcare tools
+
+Safety:
+- Emergency situations are detected before the LLM is called.
+- The agent cannot choose another patient's ID.
+- The agent does not diagnose or prescribe.
 """
 
+from functools import lru_cache
+
+from langchain.agents import create_agent
+from langchain.tools import tool
+from langchain_openai import ChatOpenAI
+
+from agents.prompts import SYSTEM_PROMPT
 from agents.tools import (
-    get_patient_summary,
-    get_medications,
     get_health_metrics,
+    get_medications,
+    get_patient_summary,
+)
+from config import OPENAI_API_KEY, OPENAI_MODEL
+
+
+# ---------------------------------------------------------------------
+# Emergency safety detection
+# ---------------------------------------------------------------------
+
+EMERGENCY_PHRASES = (
+    "emergency",
+    "can't breathe",
+    "cannot breathe",
+    "difficulty breathing",
+    "trouble breathing",
+    "chest pain",
+    "severe chest pain",
+    "unconscious",
+    "passed out",
+    "severe bleeding",
+    "stroke",
+    "seizure",
+    "suicide",
+    "suicidal",
+    "self harm",
+    "self-harm",
 )
 
 
-def _summary(patient_id: int) -> str:
-    try:
-        result = get_patient_summary.invoke(
-            {"patient_id": patient_id}
+def _is_emergency(text: str) -> bool:
+    """Return True when the message contains an emergency phrase."""
+    normalized = text.lower().strip()
+    return any(phrase in normalized for phrase in EMERGENCY_PHRASES)
+
+
+def _emergency_response() -> str:
+    """Return a safe response for potentially urgent situations."""
+    return (
+        "⚠️ **This may require urgent medical attention.**\n\n"
+        "Please contact your local emergency service or seek "
+        "immediate medical care.\n\n"
+        "HealthGuard AI cannot diagnose or treat emergencies."
+    )
+
+
+# ---------------------------------------------------------------------
+# Patient-scoped tools
+# ---------------------------------------------------------------------
+
+def _build_patient_tools(patient_id: int):
+    """
+    Build tools that are permanently restricted to the logged-in patient.
+
+    The LLM does not receive a patient_id argument, so it cannot request
+    another patient's information.
+    """
+
+    @tool
+    def patient_health_summary() -> str:
+        """
+        Retrieve the logged-in patient's stored health profile.
+
+        Use this when the user asks about their personal health profile,
+        age, basic health information, or wants a general health summary.
+        """
+        try:
+            result = get_patient_summary.invoke(
+                {"patient_id": patient_id}
+            )
+            return str(result)
+        except Exception as exc:
+            return (
+                "Unable to retrieve the patient's health profile. "
+                f"Internal error: {type(exc).__name__}"
+            )
+
+    @tool
+    def patient_medications() -> str:
+        """
+        Retrieve the logged-in patient's current medications.
+
+        Use this when the user asks what medications they take,
+        their medication schedule, or medication-related stored data.
+        """
+        try:
+            result = get_medications.invoke(
+                {"patient_id": patient_id}
+            )
+            return str(result)
+        except Exception as exc:
+            return (
+                "Unable to retrieve the patient's medication information. "
+                f"Internal error: {type(exc).__name__}"
+            )
+
+    @tool
+    def patient_health_metrics() -> str:
+        """
+        Retrieve the logged-in patient's recorded health metrics.
+
+        Includes available information such as:
+        - steps
+        - calories burned
+        - sleep hours
+        - heart rate
+
+        Use this when the user asks about their recorded health data,
+        activity, sleep, heart rate, or trends.
+        """
+        try:
+            result = get_health_metrics.invoke(
+                {"patient_id": patient_id}
+            )
+            return str(result)
+        except Exception as exc:
+            return (
+                "Unable to retrieve the patient's health metrics. "
+                f"Internal error: {type(exc).__name__}"
+            )
+
+    return [
+        patient_health_summary,
+        patient_medications,
+        patient_health_metrics,
+    ]
+
+
+# ---------------------------------------------------------------------
+# LangChain agent
+# ---------------------------------------------------------------------
+
+@lru_cache(maxsize=32)
+def _get_agent(patient_id: int):
+    """
+    Create and cache a LangChain agent for the logged-in patient.
+    """
+
+    if not OPENAI_API_KEY:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured."
         )
-        return str(result)
 
-    except Exception as e:
-        print("Summary error:", e)
-        return "Unable to load your health summary."
+    model = ChatOpenAI(
+        model=OPENAI_MODEL,
+        api_key=OPENAI_API_KEY,
+        temperature=0.2,
+    )
+
+    tools = _build_patient_tools(patient_id)
+
+    agent = create_agent(
+        model=model,
+        tools=tools,
+        system_prompt=SYSTEM_PROMPT,
+    )
+
+    return agent
 
 
-def _medications(patient_id: int) -> str:
-    try:
-        result = get_medications.invoke(
-            {"patient_id": patient_id}
+# ---------------------------------------------------------------------
+# Response extraction
+# ---------------------------------------------------------------------
+
+def _extract_response(result) -> str:
+    """
+    Extract the final assistant response from a LangChain agent result.
+    """
+
+    messages = result.get("messages", [])
+
+    if not messages:
+        return (
+            "I wasn't able to generate a response. "
+            "Please try again."
         )
 
-        return str(result)
+    # Search backwards for the last message containing content.
+    for message in reversed(messages):
+        content = getattr(message, "content", "")
 
-    except Exception as e:
-        print("Medication error:", e)
-        return "Unable to load your medication information."
+        if isinstance(content, str):
+            content = content.strip()
+
+            if content:
+                return content
+
+        elif isinstance(content, list):
+            parts = []
+
+            for item in content:
+                if isinstance(item, dict):
+                    text = item.get("text")
+
+                    if text:
+                        parts.append(str(text))
+
+                elif isinstance(item, str):
+                    parts.append(item)
+
+            response = "\n".join(parts).strip()
+
+            if response:
+                return response
+
+    return (
+        "I wasn't able to generate a response. "
+        "Please try asking your question again."
+    )
 
 
-def _metrics(patient_id: int) -> str:
-    try:
-        result = get_health_metrics.invoke(
-            {"patient_id": patient_id}
-        )
-
-        return str(result)
-
-    except Exception as e:
-        print("Metrics error:", e)
-        return "Unable to load your health metrics."
-
+# ---------------------------------------------------------------------
+# Public AI function
+# ---------------------------------------------------------------------
 
 def ask(prompt: str, patient_id: int) -> str:
     """
-    Local HealthGuard chatbot.
-    No OpenAI API required.
+    Send a user question to the HealthGuard AI agent.
+
+    Parameters
+    ----------
+    prompt:
+        User's question.
+
+    patient_id:
+        ID of the currently logged-in patient.
+
+    Returns
+    -------
+    str
+        AI-generated response.
     """
 
-    text = prompt.lower().strip()
+    # Validate input.
+    if not isinstance(prompt, str):
+        return "Please enter a valid health question."
 
-    # Emergency safety response
-    emergency_words = [
-        "emergency",
-        "can't breathe",
-        "cannot breathe",
-        "chest pain",
-        "unconscious",
-        "severe bleeding",
-        "stroke",
-        "suicide",
-        "self harm",
-        "self-harm",
-    ]
+    prompt = prompt.strip()
 
-    if any(word in text for word in emergency_words):
+    if not prompt:
         return (
-            "⚠️ This may require urgent medical attention.\n\n"
-            "Please contact your local emergency service or seek "
-            "immediate medical care.\n\n"
-            "HealthGuard AI is an educational monitoring application "
-            "and cannot diagnose or treat emergencies."
+            "Please enter a health question or choose one "
+            "of the suggested questions."
         )
 
-    # Greeting
-    if any(
-        word in text
-        for word in [
-            "hello",
-            "hi",
-            "hey",
-            "good morning",
-            "good evening",
-        ]
-    ):
+    # Validate patient context.
+    if not patient_id:
         return (
-            "Hello! 👋 I am your HealthGuard AI Assistant.\n\n"
-            "I can help you review:\n"
-            "• Health summary\n"
-            "• Health metrics\n"
-            "• Medications\n"
-            "• Nutrition information\n\n"
-            "Try asking: \"Show my health summary\""
+            "⚠️ Your account is not linked to a patient profile."
         )
 
-    # Medication
-    if any(
-        word in text
-        for word in [
-            "medication",
-            "medicine",
-            "medicines",
-            "tablet",
-            "tablets",
-            "dose",
-            "dosage",
-        ]
-    ):
-        return _medications(patient_id)
+    # Emergency protection happens before the LLM.
+    if _is_emergency(prompt):
+        return _emergency_response()
 
-    # Metrics
-    if any(
-        word in text
-        for word in [
-            "metric",
-            "metrics",
-            "steps",
-            "sleep",
-            "weight",
-            "blood pressure",
-            "pressure",
-            "heart rate",
-            "pulse",
-            "calories burned",
-        ]
-    ):
-        return _metrics(patient_id)
-
-    # Health summary
-    if any(
-        word in text
-        for word in [
-            "health",
-            "summary",
-            "status",
-            "overall",
-            "profile",
-            "dashboard",
-        ]
-    ):
+    # Check configuration before creating the agent.
+    if not OPENAI_API_KEY:
         return (
-            "📋 Here is your HealthGuard health summary:\n\n"
-            + _summary(patient_id)
-            + "\n\n"
-            "This information is for monitoring and educational "
-            "purposes only. It is not a medical diagnosis."
+            "⚠️ **The AI assistant is not configured.**\n\n"
+            "Please configure `OPENAI_API_KEY` in your local "
+            "`.env` file or Streamlit Cloud Secrets."
         )
 
-    # Nutrition
-    if any(
-        word in text
-        for word in [
-            "food",
-            "nutrition",
-            "calorie",
-            "calories",
-            "protein",
-            "carbohydrate",
-            "carbs",
-            "fat",
-            "diet",
-            "meal",
-            "meals",
-        ]
-    ):
-        return (
-            "🥗 You can record and review nutrition information "
-            "from the Nutrition page.\n\n"
-            "Individual dietary needs vary. For personalized "
-            "dietary advice, consult a qualified healthcare "
-            "professional."
+    try:
+        agent = _get_agent(int(patient_id))
+
+        result = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ]
+            }
         )
 
-    # Help
-    if any(
-        word in text
-        for word in [
-            "help",
-            "what can you do",
-            "features",
-            "options",
-        ]
-    ):
-        return (
-            "🤖 I can help you review information stored in "
-            "your HealthGuard profile.\n\n"
-            "Try asking:\n"
-            "• Show my health summary\n"
-            "• What medications am I taking?\n"
-            "• Show my health metrics\n"
-            "• Tell me about nutrition\n"
-            "• What can you do?\n\n"
-            "I cannot diagnose medical conditions."
-        )
+        answer = _extract_response(result)
 
-    # Default
-    return (
-        "I can help you review your HealthGuard information.\n\n"
-        "Try:\n"
-        "• Show my health summary\n"
-        "• What medications am I taking?\n"
-        "• Show my health metrics\n"
-        "• What can you do?\n\n"
-        "This local assistant works without an OpenAI API."
-    )
+        if not answer:
+            return (
+                "I wasn't able to generate a response. "
+                "Please try asking your question again."
+            )
+
+        return answer
+
+    except Exception as exc:
+        # Print the complete technical error in the Streamlit terminal.
+        # This is useful for debugging without exposing it to the user.
+        import traceback
+
+        print("\n" + "=" * 70)
+        print("HEALTHGUARD AI AGENT ERROR")
+        print("=" * 70)
+        print(f"Error type: {type(exc).__name__}")
+        print(f"Error: {exc}")
+        traceback.print_exc()
+        print("=" * 70 + "\n")
+
+        # Give the user a clean message.
+        return (
+            "⚠️ **I couldn't connect to the AI service right now.**\n\n"
+            "Please try again in a moment.\n\n"
+            "You can still use the Medication, Nutrition, "
+            "Medical Information, Dashboard and Reports sections.\n\n"
+            "If the problem continues, check the Streamlit terminal "
+            "for the AI service error."
+        )
