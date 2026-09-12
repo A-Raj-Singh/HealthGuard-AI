@@ -3,6 +3,8 @@ import streamlit as st
 from services.report_service import (
     report_data,
     metrics_csv,
+    health_json,
+    health_xml,
     health_pdf,
 )
 
@@ -143,15 +145,29 @@ def render(patient_id):
         "reference or to share with a healthcare professional."
     )
 
-    csv_bytes = metrics_csv(metrics)
+   csv_bytes = metrics_csv(metrics)
 
+    json_bytes = health_json(
+        patient,
+        metrics,
+        medications,
+        nutrition,
+    )
+    
+    xml_bytes = health_xml(
+        patient,
+        metrics,
+        medications,
+        nutrition,
+    )
+    
     pdf_bytes = health_pdf(
         patient,
         metrics,
         medications,
     )
 
-    csv_col, pdf_col = st.columns(2)
+    csv_col, json_col, xml_col, pdf_col = st.columns(4)
 
     with csv_col:
 
@@ -191,6 +207,23 @@ def render(patient_id):
             csv_bytes,
             "health_metrics.csv",
             "text/csv",
+            width="stretch",
+        )
+    with json_col:
+        st.download_button(
+            "⬇️ Download JSON",
+            json_bytes,
+            "health_report.json",
+            "application/json",
+            width="stretch",
+        )
+
+    with xml_col:
+        st.download_button(
+            "⬇️ Download XML",
+            xml_bytes,
+            "health_report.xml",
+            "application/xml",
             width="stretch",
         )
 
