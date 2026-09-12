@@ -67,31 +67,60 @@ class HealthMetric(Base):
 
 class NutritionLog(Base):
     __tablename__ = 'nutrition_logs'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    patient_id: Mapped[int] = mapped_column(ForeignKey('patients.id'), index=True)
-    food_name: Mapped[str] = mapped_column(String(160))
-    calories: Mapped[float] = mapped_column(Float, default=0)
-    protein_g: Mapped[float] = mapped_column(Float, default=0)
-    carbs_g: Mapped[float] = mapped_column(Float, default=0)
-    fat_g: Mapped[float] = mapped_column(Float, default=0)
-    log_date: Mapped[date] = mapped_column(Date, default=date.today, index=True)
-    source: Mapped[str] = mapped_column(String(40), default='manual')
-    patient: Mapped['Patient'] = relationship(back_populates='nutrition_logs')
-
-class HealthGoal(Base):
-    __tablename__ = 'health_goals'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     patient_id: Mapped[int] = mapped_column(
         ForeignKey('patients.id'),
         index=True
     )
+    food_name: Mapped[str] = mapped_column(String(160))
+    calories: Mapped[float] = mapped_column(Float, default=0)
+    protein_g: Mapped[float] = mapped_column(Float, default=0)
+    carbs_g: Mapped[float] = mapped_column(Float, default=0)
+    fat_g: Mapped[float] = mapped_column(Float, default=0)
+    log_date: Mapped[date] = mapped_column(
+        Date,
+        default=date.today,
+        index=True
+    )
+    source: Mapped[str] = mapped_column(
+        String(40),
+        default='manual'
+    )
 
-    goal_type: Mapped[str] = mapped_column(String(50))
-    target_value: Mapped[float] = mapped_column(Float)
-    unit: Mapped[str] = mapped_column(String(30))
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    patient: Mapped['Patient'] = relationship(
+        back_populates='nutrition_logs'
+    )
+
+
+class HealthGoal(Base):
+    __tablename__ = 'health_goals'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+    patient_id: Mapped[int] = mapped_column(
+        ForeignKey('patients.id'),
+        index=True
+    )
+    goal_type: Mapped[str] = mapped_column(
+        String(50)
+    )
+    target_value: Mapped[float] = mapped_column(
+        Float
+    )
+    unit: Mapped[str] = mapped_column(
+        String(30)
+    )
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
 
     patient: Mapped['Patient'] = relationship(
         back_populates='health_goals'
+    )
+
+
     )
