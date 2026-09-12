@@ -27,6 +27,7 @@ class Patient(Base):
     doses: Mapped[list['DoseLog']] = relationship(back_populates='patient', cascade='all, delete-orphan')
     metrics: Mapped[list['HealthMetric']] = relationship(back_populates='patient', cascade='all, delete-orphan')
     nutrition_logs: Mapped[list['NutritionLog']] = relationship(back_populates='patient', cascade='all, delete-orphan')
+    health_goals: Mapped[list['HealthGoal']] = relationship(back_populates='patient',cascade='all, delete-orphan')
 
 class Medication(Base):
     __tablename__ = 'medications'
@@ -70,6 +71,17 @@ class NutritionLog(Base):
     protein_g: Mapped[float] = mapped_column(Float, default=0)
     carbs_g: Mapped[float] = mapped_column(Float, default=0)
     fat_g: Mapped[float] = mapped_column(Float, default=0)
+
+class HealthGoal(Base):
+    __tablename__ = 'health_goals'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey('patients.id'),index=True )
+    goal_type: Mapped[str] = mapped_column(String(50))
+    target_value: Mapped[float] = mapped_column(Float)
+    unit: Mapped[str] = mapped_column(String(30))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    patient: Mapped['Patient'] = relationship(back_populates='health_goals' )
     log_date: Mapped[date] = mapped_column(Date, default=date.today, index=True)
     source: Mapped[str] = mapped_column(String(40), default='manual')
     patient: Mapped['Patient'] = relationship(back_populates='nutrition_logs')
