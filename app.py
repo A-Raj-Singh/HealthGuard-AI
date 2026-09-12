@@ -23,6 +23,8 @@ st.set_page_config(
 
 @st.cache_resource
 def init_database():
+    from database import models  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
 
 
