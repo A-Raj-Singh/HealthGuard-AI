@@ -1,8 +1,9 @@
 from datetime import date, datetime, time
 from sqlalchemy import select
 from .database import get_session
-from .models import DoseLog, HealthMetric, Medication, NutritionLog, Patient, User
+from .models import DoseLog, HealthGoal, HealthMetric, Medication, NutritionLog, Patient, User
 from auth.password import hash_password, verify_password
+
 
 def create_patient(name, age, gender, height_cm=None, weight_kg=None):
     with get_session() as db:
@@ -102,3 +103,50 @@ def list_nutrition(patient_id, log_date=None):
         stmt = select(NutritionLog).where(NutritionLog.patient_id == patient_id)
         if log_date: stmt = stmt.where(NutritionLog.log_date == log_date)
         return list(db.scalars(stmt.order_by(NutritionLog.log_date.desc(), NutritionLog.id.desc())))
+
+def add_health_goal(patient_id, goal_type, target_value, unit):
+    with get_session() as db:
+        goal = HealthGoal(
+            patient_id=patient_id,
+            goal_type=goal_type,
+            target_value=target_value,
+            unit=unit,
+            active=True,
+        )
+        db.add(goal)
+        db.commit()
+        db.refresh(goal)
+        return goal
+
+
+def list_health_goals(patient_id, active_only=True):
+    with get_session() as db:
+        stmt = select(HealthGoal).where(
+            HealthGoal.patient_id == patient_id
+        )
+
+        if active_only:
+            stmt = stmt.where(HealthGoal.active.is_(True))
+
+        return list(
+            db.scalars(
+                stmt.order_by(HealthGoal.id.desc())
+            )
+        )
+
+
+def deactivate_health_goal(goal_id, patient_id):
+    with get_session() as db:
+        goal = db.scalar(
+            select(HealthGoal).where(
+                HealthGoal.id == goal_id,
+                HealthGoal.patient_id == patient_id,
+            )
+        )
+
+        if not goal:
+            return False
+
+        goal.active = False
+        db.commit()
+        return True
