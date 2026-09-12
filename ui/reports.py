@@ -145,7 +145,7 @@ def render(patient_id):
         "reference or to share with a healthcare professional."
     )
 
-   csv_bytes = metrics_csv(metrics)
+    csv_bytes = metrics_csv(metrics)
 
     json_bytes = health_json(
         patient,
