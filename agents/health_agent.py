@@ -3,7 +3,7 @@ HealthGuard AI - LangChain Healthcare Agent
 
 Uses:
 - LangChain 1.x
-- OpenAI through langchain-openai
+- Google Gemini through langchain-google-genai
 - HealthGuard patient-scoped healthcare tools
 
 Safety:
@@ -16,7 +16,7 @@ from functools import lru_cache
 
 from langchain.agents import create_agent
 from langchain.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from agents.prompts import SYSTEM_PROMPT
 from agents.tools import (
@@ -24,7 +24,7 @@ from agents.tools import (
     get_medications,
     get_patient_summary,
 )
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from config import GEMINI_API_KEY, GEMINI_MODEL
 
 
 # ---------------------------------------------------------------------
@@ -154,21 +154,14 @@ def _build_patient_tools(patient_id: int):
 # ---------------------------------------------------------------------
 
 @lru_cache(maxsize=32)
-def _get_agent(patient_id: int):
-    """
-    Create and cache a LangChain agent for the logged-in patient.
-    """
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-    if not OPENAI_API_KEY:
-        raise RuntimeError(
-            "OPENAI_API_KEY is not configured."
-        )
-
-    model = ChatOpenAI(
-        model=OPENAI_MODEL,
-        api_key=OPENAI_API_KEY,
-        temperature=0.2,
-    )
+model = ChatGoogleGenerativeAI(
+    model=GEMINI_MODEL,
+    google_api_key=GEMINI_API_KEY,
+    temperature=0.2,
+)
 
     tools = _build_patient_tools(patient_id)
 
@@ -277,12 +270,12 @@ def ask(prompt: str, patient_id: int) -> str:
         return _emergency_response()
 
     # Check configuration before creating the agent.
-    if not OPENAI_API_KEY:
-        return (
-            "⚠️ **The AI assistant is not configured.**\n\n"
-            "Please configure `OPENAI_API_KEY` in your local "
-            "`.env` file or Streamlit Cloud Secrets."
-        )
+    if not GEMINI_API_KEY:
+    return (
+        "⚠️ **The AI assistant is not configured.**\n\n"
+        "Please configure `GEMINI_API_KEY` in your local "
+        "`.env` file or Streamlit Cloud Secrets."
+    )
 
     try:
         agent = _get_agent(int(patient_id))
