@@ -209,7 +209,40 @@ def render(patient_id):
             "text/csv",
             width="stretch",
         )
+    
     with json_col:
+
+        st.html(
+            """
+            <div style="
+                padding:1.2rem;
+                border:1px solid #e2e8f0;
+                border-radius:18px;
+                background:white;
+                margin-bottom:0.7rem;
+            ">
+
+                <div style="
+                    font-size:1.25rem;
+                    font-weight:700;
+                    color:#0f4c5c;
+                ">
+                    🧾 JSON Report
+                </div>
+
+                <div style="
+                    margin-top:0.4rem;
+                    color:#64748b;
+                    font-size:0.88rem;
+                ">
+                    Download structured health information
+                    in JSON format for data exchange.
+                </div>
+
+            </div>
+            """
+        )
+
         st.download_button(
             "⬇️ Download JSON",
             json_bytes,
@@ -218,7 +251,40 @@ def render(patient_id):
             width="stretch",
         )
 
+
     with xml_col:
+
+        st.html(
+            """
+            <div style="
+                padding:1.2rem;
+                border:1px solid #e2e8f0;
+                border-radius:18px;
+                background:white;
+                margin-bottom:0.7rem;
+            ">
+
+                <div style="
+                    font-size:1.25rem;
+                    font-weight:700;
+                    color:#0f4c5c;
+                ">
+                    🗂️ XML Report
+                </div>
+
+                <div style="
+                    margin-top:0.4rem;
+                    color:#64748b;
+                    font-size:0.88rem;
+                ">
+                    Download structured health information
+                    in XML format for data exchange.
+                </div>
+
+            </div>
+            """
+        )
+
         st.download_button(
             "⬇️ Download XML",
             xml_bytes,
