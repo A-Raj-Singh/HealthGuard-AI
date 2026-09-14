@@ -1,141 +1,132 @@
 # HealthGuard AI — Healthcare Monitoring AI Agent
 
-A Streamlit healthcare monitoring project with SQLite/SQLAlchemy, medication tracking, nutrition logging, MedlinePlus lookup, optional Spoonacular nutrition lookup, and an optional LangChain/Gemini assistant.
+HealthGuard AI is an educational healthcare monitoring application built with
+Streamlit, SQLite, SQLAlchemy, LangChain, and Google Gemini.
 
-## Important scope
+The application provides a personal health dashboard for tracking health
+metrics, medications, medication adherence, nutrition records, wellness goals,
+and health information. It also provides an optional AI health assistant that
+can answer questions using patient-scoped application data and general
+health information.
 
-This is an educational software project. It is **not** a medical device and does not diagnose, prescribe, or replace professional care.
+> **Important:** HealthGuard AI is an educational software project. It is not
+> a medical device and does not diagnose, prescribe, or replace advice from a
+> qualified healthcare professional.
+
+---
 
 ## Features
 
-- Patient registration and login with bcrypt password hashing
-- Personal dashboard with health metrics and charts
-- Medication schedule and daily dose tracking
+### 👤 Patient Account
+
+- Patient registration and login
+- Bcrypt password hashing
+- Patient-specific dashboard
+- Patient profile information
+
+### 📊 Health Monitoring
+
+- Health metric recording
+- Health dashboard
+- Metric visualization
+- Progress tracking
+- Personal wellness goals
+- Daily steps and other health metrics
+
+### 💊 Medication Management
+
+- Medication scheduling
+- Daily medication dose tracking
 - Medication adherence percentage
-- Nutrition logging with optional Spoonacular lookup
-- Medical-topic search using MedlinePlus
-- Optional LangChain/Gemini health assistant with read-only patient tools
-- PDF and CSV report downloads
-- SQLite database
-- Pytest test and GitHub Actions CI
-- Streamlit Community Cloud deployment configuration
+- Medication history
+- Medication interaction lookup
+- FDA/openFDA drug-label information when available
 
-## 1. Prerequisites
+### 🥗 Nutrition
 
-- Python 3.11 or 3.12
-- Git
-- A Gemini API key if you want the AI Assistant
-- A Spoonacular API key if you want automatic nutrition lookup
+- Nutrition logging
+- Manual nutrition entry
+- Optional Spoonacular nutrition lookup
 
-## 2. Create the environment
+### 🩺 Medical Information
 
-Windows PowerShell:
+- Medical-topic lookup using MedlinePlus
+- Health information retrieval from external sources
+- Educational health information with safety disclaimers
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+### 🤖 AI Health Assistant
 
-macOS/Linux:
+- Optional LangChain-based AI agent
+- Google Gemini integration
+- Patient-scoped health tools
+- Medication information
+- Patient health profile information
+- Recorded health metrics
+- General wellness guidance
+- Emergency phrase detection and safety response
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+The AI assistant is designed to work with application data relevant to the
+currently authenticated patient rather than providing unrestricted access to
+the database.
 
-## 3. Configure secrets locally
+### 📄 Reports & Export
 
-Copy `.env.example` to `.env` and add your own keys. Never commit `.env`.
+- Health reports
+- PDF report generation
+- CSV health-data export
+- JSON report generation
+- XML report generation
+- Patient health summary
+- Medication summary
 
-```env
-GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-2.5-flash
-SPOONACULAR_API_KEY=your_key
-```
+### ⚙️ Technology
 
-The application still starts without these keys. Without Gemini, the AI page explains that it is not configured; without Spoonacular, nutrition can be entered manually.
+- Python
+- Streamlit
+- SQLAlchemy
+- SQLite
+- LangChain
+- Google Gemini
+- Pandas
+- Plotly
+- ReportLab
+- MedlinePlus
+- openFDA
+- Optional Spoonacular API
+- Pytest
+- GitHub Actions
 
-## 4. Initialize and seed the database
+---
 
-```bash
-python init_db.py
-python seed.py
-```
-
-Demo login:
-
-```text
-Username: demo
-Password: DemoPass123!
-```
-
-If you have an older database from the prototype, delete `data/healthcare.db` first and run the two commands again. This project intentionally does not include database migrations.
-
-## 5. Run the application
-
-```bash
-streamlit run app.py
-```
-
-Then open the local URL shown by Streamlit, normally `http://localhost:8501`.
-
-## 6. Test
-
-```bash
-pytest -q
-```
-
-## 7. GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial working HealthGuard AI project"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/healthcare-monitoring-ai-agent.git
-git push -u origin main
-```
-
-Do not commit `.env`, `data/healthcare.db`, or `.streamlit/secrets.toml`.
-
-## 8. Streamlit Community Cloud
-
-1. Push the repository to GitHub.
-2. Open Streamlit Community Cloud and choose **Create app**.
-3. Select your repository, branch, and `app.py` entrypoint.
-4. In Advanced settings / Secrets, add:
-
-```toml
-GEMINI_API_KEY = "your_key"
-GEMINI_MODEL = "gemini-2.5-flash"
-SPOONACULAR_API_KEY = "your_spoonacular_key"
-```
-
-5. Deploy.
-
-The local SQLite database is suitable for a student/demo deployment. For multi-user production use, move the database to a managed persistent database and add a proper authentication provider.
-
-## Project structure
+# Architecture
 
 ```text
-healthcare-monitoring-ai-agent/
-├── app.py
-├── config.py
-├── init_db.py
-├── seed.py
-├── database/
-├── auth/
-├── agents/
-├── api/
-├── services/
-├── ui/
-├── tests/
-├── data/
-└── .github/workflows/
-```
-
-## Safety
-
-The application displays an educational-use disclaimer. Do not use it for emergencies or as a substitute for professional medical advice.
+                         ┌──────────────────────┐
+                         │      Streamlit UI     │
+                         │ Dashboard / Chat /    │
+                         │ Medications / Goals   │
+                         │ Reports / Nutrition   │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Application Services │
+                         │                      │
+                         │ Health Metrics       │
+                         │ Medications          │
+                         │ Nutrition            │
+                         │ Goals                │
+                         │ Reports              │
+                         │ Interactions         │
+                         └──────────┬───────────┘
+                                    │
+                    ┌───────────────┼────────────────┐
+                    ▼               ▼                ▼
+             ┌────────────┐  ┌────────────┐  ┌──────────────┐
+             │  SQLite /  │  │ External   │  │ LangChain /  │
+             │ SQLAlchemy │  │ APIs       │  │ Gemini Agent │
+             └────────────┘  └────────────┘  └───────┬──────┘
+                                                     │
+                                                     ▼
+                                             Patient-scoped
+                                                  tools
