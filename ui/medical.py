@@ -4,8 +4,10 @@ from api.medical_api import search_medical_info
 from config import MEDICAL_DISCLAIMER
 
 
-def render():
+NLM_SOURCE_NAME = "U.S. National Library of Medicine (NLM)"
 
+
+def render():
     # =========================================================
     # HEADER
     # =========================================================
@@ -33,13 +35,11 @@ def render():
             border:1px solid rgba(15,76,92,0.12);
             margin:0.8rem 0 1.3rem 0;
         ">
-
             <div style="
                 display:flex;
                 align-items:center;
                 gap:1rem;
             ">
-
                 <div style="
                     width:54px;
                     height:54px;
@@ -55,7 +55,6 @@ def render():
                 </div>
 
                 <div>
-
                     <div style="
                         font-size:1.15rem;
                         font-weight:750;
@@ -72,11 +71,8 @@ def render():
                         Search for general information about conditions,
                         symptoms, wellness topics, and more.
                     </div>
-
                 </div>
-
             </div>
-
         </div>
         """
     )
@@ -88,8 +84,7 @@ def render():
     st.subheader("🔎 Search medical information")
 
     with st.form("medical_search_form"):
-
-        q = st.text_input(
+        query = st.text_input(
             "Health topic",
             placeholder="e.g. hypertension, asthma, diabetes",
         )
@@ -105,24 +100,19 @@ def render():
     # =========================================================
 
     if search_button:
-
-        if not q.strip():
-
-            st.warning(
-                "Please enter a health topic to search."
-            )
+        if not query.strip():
+            st.warning("Please enter a health topic to search.")
 
         else:
+            search_query = query.strip()
 
             with st.spinner(
                 "🔎 Searching trusted medical information..."
             ):
-
                 try:
-                    results = search_medical_info(q.strip())
+                    results = search_medical_info(search_query)
 
                 except Exception:
-
                     results = []
 
                     st.error(
@@ -131,20 +121,15 @@ def render():
                     )
 
             if results:
-
                 st.success(
                     f"✅ Found {len(results)} result(s) for "
-                    f"**{q.strip()}**."
+                    f"**{search_query}**."
                 )
 
                 st.subheader("📚 Search results")
 
-                for index, item in enumerate(results):
-
-                    title = (
-                        item.get("title")
-                        or "Health topic"
-                    )
+                for item in results:
+                    title = item.get("title") or "Health topic"
 
                     summary = (
                         item.get("summary")
@@ -154,22 +139,21 @@ def render():
                     url = item.get("url")
 
                     with st.container(border=True):
-
-                        st.markdown(
-                            f"### 🩺 {title}"
-                        )
+                        st.markdown(f"### 🩺 {title}")
 
                         st.write(summary)
 
-                        if url:
+                        st.caption(
+                            f"Source: {NLM_SOURCE_NAME}"
+                        )
 
+                        if url:
                             st.link_button(
-                                "🔗 Open source",
+                                "🔗 Open NLM source",
                                 url,
                             )
 
             else:
-
                 st.warning(
                     "No results found or the medical information "
                     "service is temporarily unavailable."
@@ -216,55 +200,51 @@ def render():
             selected_topic = "mental health"
 
     if selected_topic:
-
         with st.spinner(
             f"🔎 Searching for {selected_topic}..."
         ):
-
             try:
-                results = search_medical_info(
-                    selected_topic
-                )
+                results = search_medical_info(selected_topic)
 
             except Exception:
                 results = []
 
-        if results:
+                st.error(
+                    "The medical information service is temporarily "
+                    "unavailable. Please try again later."
+                )
 
+        if results:
             st.subheader(
                 f"📚 Results for {selected_topic.title()}"
             )
 
             for item in results:
-
-                title = (
-                    item.get("title")
-                    or "Health topic"
-                )
+                title = item.get("title") or "Health topic"
 
                 summary = (
                     item.get("summary")
-                    or "No summary is available."
+                    or "No summary is available for this result."
                 )
 
                 url = item.get("url")
 
                 with st.container(border=True):
-
-                    st.markdown(
-                        f"### 🩺 {title}"
-                    )
+                    st.markdown(f"### 🩺 {title}")
 
                     st.write(summary)
 
+                    st.caption(
+                        f"Source: {NLM_SOURCE_NAME}"
+                    )
+
                     if url:
                         st.link_button(
-                            "🔗 Open source",
+                            "🔗 Open NLM source",
                             url,
                         )
 
         else:
-
             st.warning(
                 "No information was found for this topic."
             )
@@ -275,9 +255,7 @@ def render():
 
     st.divider()
 
-    st.warning(
-        MEDICAL_DISCLAIMER
-    )
+    st.warning(MEDICAL_DISCLAIMER)
 
     st.html(
         """
@@ -290,12 +268,10 @@ def render():
             color:#64748b;
             font-size:0.82rem;
         ">
-
             🛡️ <strong>HealthGuard AI reminder:</strong>
             Medical information provided here is intended for general
             educational purposes. It should not be used for diagnosis,
             treatment, or emergency medical decisions.
-
         </div>
         """
     )
