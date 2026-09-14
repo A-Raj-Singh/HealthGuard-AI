@@ -1,8 +1,69 @@
 import requests
-from urllib.parse import quote
 
 
 OPENFDA_LABEL_URL = "https://api.fda.gov/drug/label.json"
+
+
+def _empty_result(medicine: str, message: str) -> dict:
+    """Return a consistent unsuccessful lookup result."""
+    return {
+        "found": False,
+        "medicine": medicine,
+        "interactions": [],
+        "source": "openFDA / FDA drug labeling",
+        "message": message,
+    }
+
+
+def _extract_interactions(results: list) -> list[str]:
+    """Extract drug-interaction sections from FDA label results."""
+    interactions = []
+
+    for result in results:
+        values = result.get("drug_interactions", [])
+
+        if isinstance(values, list):
+            interactions.extend(
+                str(value).strip()
+                for value in values
+                if str(value).strip()
+            )
+
+        elif isinstance(values, str) and values.strip():
+            interactions.append(values.strip())
+
+    # Remove duplicate sections while preserving order.
+    unique = []
+    seen = set()
+
+    for item in interactions:
+        key = item.lower()
+
+        if key not in seen:
+            seen.add(key)
+            unique.append(item)
+
+    return unique
+
+
+def _search_labels(search_query: str) -> list:
+    """Search the openFDA drug-label endpoint."""
+    response = requests.get(
+        OPENFDA_LABEL_URL,
+        params={
+            "search": search_query,
+            "limit": 5,
+        },
+        timeout=10,
+    )
+
+    if response.status_code == 404:
+        return []
+
+    response.raise_for_status()
+
+    data = response.json()
+    return data.get("results", [])
 
 
 def lookup_drug_label(medicine_name: str) -> dict:
@@ -13,90 +74,93 @@ def lookup_drug_label(medicine_name: str) -> dict:
     prescribe, or recommend medication changes.
     """
 
-    name = medicine_name.strip()
+    name = str(medicine_name).strip()
 
     if not name:
-        return {
-            "found": False,
-            "medicine": medicine_name,
-            "interactions": [],
-            "source": "openFDA",
-            "message": "Please enter a medicine name.",
-        }
-
-    try:
-        response = requests.get(
-            OPENFDA_LABEL_URL,
-            params={
-                "search": f'openfda.brand_name:"{quote(name)}"',
-                "limit": 5,
-            },
-            timeout=10,
+        return _empty_result(
+            medicine_name,
+            "Please enter a medicine name.",
         )
 
-        if response.status_code != 200:
-            return {
-                "found": False,
-                "medicine": name,
-                "interactions": [],
-                "source": "openFDA",
-                "message": "No reliable drug-label information was found.",
-            }
+    # -------------------------------------------------------------
+    # 1. Try exact-ish brand-name search.
+    # -------------------------------------------------------------
+    try:
+        results = _search_labels(
+            f'openfda.brand_name:"{name}"'
+        )
 
-        data = response.json()
-        results = data.get("results", [])
+        # ---------------------------------------------------------
+        # 2. If no brand match, try generic name.
+        # ---------------------------------------------------------
+        if not results:
+            results = _search_labels(
+                f'openfda.generic_name:"{name}"'
+            )
+
+        # ---------------------------------------------------------
+        # 3. Final fallback: search the complete label dataset.
+        # ---------------------------------------------------------
+        if not results:
+            results = _search_labels(
+                f'"{name}"'
+            )
 
         if not results:
+            return _empty_result(
+                name,
+                "No matching FDA drug label was found.",
+            )
+
+        interactions = _extract_interactions(results)
+
+        if not interactions:
             return {
-                "found": False,
+                "found": True,
                 "medicine": name,
                 "interactions": [],
-                "source": "openFDA",
-                "message": "No matching FDA drug label was found.",
+                "source": "openFDA / FDA drug labeling",
+                "message": (
+                    "FDA drug-label information was found, "
+                    "but no drug-interaction section was available "
+                    "in the returned labels."
+                ),
             }
-
-        interactions = []
-
-        for result in results:
-            values = result.get("drug_interactions", [])
-
-            if isinstance(values, list):
-                interactions.extend(values)
-            elif isinstance(values, str):
-                interactions.append(values)
 
         return {
             "found": True,
             "medicine": name,
             "interactions": interactions,
-            "source": "openFDA",
+            "source": "openFDA / FDA drug labeling",
             "message": (
-                "FDA drug-label information retrieved successfully."
+                "FDA drug-label interaction information "
+                "retrieved successfully."
             ),
         }
 
+    except requests.HTTPError as exc:
+        return _empty_result(
+            name,
+            (
+                "The FDA medication information service returned "
+                f"an HTTP error ({exc.response.status_code})."
+            ),
+        )
+
     except requests.RequestException:
-        return {
-            "found": False,
-            "medicine": name,
-            "interactions": [],
-            "source": "openFDA",
-            "message": (
+        return _empty_result(
+            name,
+            (
                 "The medication information service is temporarily "
                 "unavailable. Please try again later."
             ),
-        }
+        )
 
     except (ValueError, TypeError):
-        return {
-            "found": False,
-            "medicine": name,
-            "interactions": [],
-            "source": "openFDA",
-            "message": (
-                "The medication information could not be processed."
-            ),
-        }
+        return _empty_result(
+            name,
+            "The medication information could not be processed.",
+        )
 
 
 def check_medication_interactions(medicines: list[str]) -> list[dict]:
@@ -108,15 +172,19 @@ def check_medication_interactions(medicines: list[str]) -> list[dict]:
     """
 
     results = []
-
     cleaned_medicines = []
+    seen = set()
 
     for medicine in medicines:
-        name = medicine.strip()
+        name = str(medicine).strip()
 
-        if name and name.lower() not in {
-            item.lower() for item in cleaned_medicines
-        }:
+        if not name:
+            continue
+
+        key = name.lower()
+
+        if key not in seen:
+            seen.add(key)
             cleaned_medicines.append(name)
 
     for medicine in cleaned_medicines:

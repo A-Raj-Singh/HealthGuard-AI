@@ -10,7 +10,7 @@ DATA_DIR.mkdir(exist_ok=True)
 DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{DATA_DIR / 'healthcare.db'}")
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.6-flash')
 SPOONACULAR_API_KEY = os.getenv('SPOONACULAR_API_KEY', '')
 
 APP_NAME = 'HealthGuard AI'
