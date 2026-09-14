@@ -7,4 +7,4 @@ __pycache__/
 venv/
 data/*.db
 .DS_Store
- structure.txt
+structure.txt
